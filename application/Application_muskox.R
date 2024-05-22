@@ -5,7 +5,7 @@ library(moveHMM)
 library(PHSMM)
 library(CircStats)
 library(optimParallel)
-library(Lcpp)
+library(LaMa)
 
 # Data --------------------------------------------------------------------
 
@@ -378,7 +378,7 @@ for(i in 1:N){
 #   if(state > 1){aggr_ind = cumsum(aggr_sizes)[state-1]+1:aggr_sizes[state]
 #   } else{aggr_ind = 1:aggr_sizes[1]}
 #   I = setdiff(1:sum(aggr_sizes), aggr_ind)
-#   delta = Lcpp::stationary_p(Gamma)
+#   delta = LaMa::stationary_p(Gamma)
 #   weights = numeric(L)
 #   weights[1] = sum(delta[L, I]*Gamma[I,I_minus,L])
 #   for (t in 2:L){ 
@@ -454,16 +454,16 @@ round(t(tab),1)
 #                             exp(theta.star[N*(2+2*(K[1]+K[2]))+3*N+1:(N*(N-2))])),N,N-1)))
 #     omega = t(omega)/apply(omega,2,sum)
 #   }else{ omega = matrix(c(0,1,1,0),2,2) }
-#   Z1 = Lcpp::trigBasisExp(tod=1:L, L=L, degree=K[1])
-#   Z2 = Lcpp::trigBasisExp(tod=1:L, L=L, degree=K[2])
+#   Z1 = LaMa::trigBasisExp(tod=1:L, L=L, degree=K[1])
+#   Z2 = LaMa::trigBasisExp(tod=1:L, L=L, degree=K[2])
 #   Mu_dwell = exp(cbind(1,Z1)%*%t(beta_Mu))
 #   Phi_dwell = exp(cbind(1,Z2)%*%t(beta_Phi))
 #   dm = list()
 #   for(j in 1:N){
 #     dm[[j]] = sapply(1:agsizes[j]-1, dnbinom, mu=Mu_dwell[,j], size=1/Phi_dwell[,j])
 #   }
-#   Gamma = Lcpp::tpm_phsmm(omega, dm)
-#   Delta_large = Lcpp::stationary_p(Gamma)
+#   Gamma = LaMa::tpm_phsmm(omega, dm)
+#   Delta_large = LaMa::stationary_p(Gamma)
 #   startInds = c(0, cumsum(agsizes[1:(N-1)]))
 #   Delta = matrix(nrow=L, ncol = N)
 #   for(j in 1:N){
@@ -484,16 +484,16 @@ round(t(tab),1)
 #     omega = t(omega)/apply(omega,2,sum)
 #   }else{ omega = matrix(c(0,1,1,0),2,2) }
 #   todseq = (t + 1:L) %% L
-#   Z1 = Lcpp::trigBasisExp(tod=todseq, L=L, degree=K[1])
-#   Z2 = Lcpp::trigBasisExp(tod=todseq, L=L, degree=K[2])
+#   Z1 = LaMa::trigBasisExp(tod=todseq, L=L, degree=K[1])
+#   Z2 = LaMa::trigBasisExp(tod=todseq, L=L, degree=K[2])
 #   Mu_dwell = exp(cbind(1,Z1)%*%t(beta_Mu))
 #   Phi_dwell = exp(cbind(1,Z2)%*%t(beta_Phi))
 #   dm = list()
 #   for(j in 1:N){
 #     dm[[j]] = sapply(1:agsizes[j]-1, dnbinom, mu=Mu_dwell[,j], size=1/Phi_dwell[,j])
 #   }
-#   Gamma = Lcpp::tpm_phsmm(omega, dm)
-#   delta_large = Lcpp::stationary_p(Gamma, t=1)
+#   Gamma = LaMa::tpm_phsmm(omega, dm)
+#   delta_large = LaMa::stationary_p(Gamma, t=1)
 #   startInds = c(0, cumsum(agsizes[1:(N-1)]))
 #   delta = rep(NA,N)
 #   for(j in 1:N){
@@ -632,7 +632,7 @@ get_delta = function(theta.star, N=3, L=24, K=1, agsizes = rep(30,N)){
     omega = t(omega)/apply(omega,2,sum)
   }else{ omega = matrix(c(0,1,1,0),2,2) }
   # dwell-time distributions and approximating tpm
-  Z = Lcpp::trigBasisExp(tod=1:L, L=L, degree = K)
+  Z = LaMa::trigBasisExp(tod=1:L, L=L, degree = K)
   Mu_dwell = exp(cbind(1,Z)%*%t(beta_mu))
   dm = list()
   for(j in 1:N){
@@ -641,8 +641,8 @@ get_delta = function(theta.star, N=3, L=24, K=1, agsizes = rep(30,N)){
       dm[[j]][t,] = dnbinom(1:agsizes[j]-1, mu = Mu_dwell[t,j], size = 1/phi_dwell[j])
     }
   }
-  Gamma = Lcpp::tpm_phsmm(omega, dm)
-  Delta_large = Lcpp::stationary_p(Gamma)
+  Gamma = LaMa::tpm_phsmm(omega, dm)
+  Delta_large = LaMa::stationary_p(Gamma)
   startInds = c(0, cumsum(agsizes[1:(N-1)]))
   Delta = matrix(nrow=L, ncol = N)
   for(j in 1:N){
@@ -664,14 +664,14 @@ get_delta_cont = function(theta.star, t, N=3, L=24, K=1, agsizes = rep(30,N)){
     omega = t(omega)/apply(omega,2,sum)
   }else{ omega = matrix(c(0,1,1,0),2,2) }
   todseq = (t + 1:L) %% L
-  Z = Lcpp::trigBasisExp(tod=todseq, L=L, degree=K)
+  Z = LaMa::trigBasisExp(tod=todseq, L=L, degree=K)
   Mu_dwell = exp(cbind(1,Z)%*%t(beta_mu))
   dm = list()
   for(j in 1:N){
     dm[[j]] = sapply(1:agsizes[j]-1, dnbinom, mu = Mu_dwell[,j], size=1/phi_dwell[j])
   }
-  Gamma = Lcpp::tpm_phsmm(omega, dm)
-  delta_large = Lcpp::stationary_p(Gamma, t=1)
+  Gamma = LaMa::tpm_phsmm(omega, dm)
+  delta_large = LaMa::stationary_p(Gamma, t=1)
   startInds = c(0, cumsum(agsizes[1:(N-1)]))
   delta = rep(NA,N)
   for(j in 1:N){
@@ -683,8 +683,8 @@ get_delta_cont = function(theta.star, t, N=3, L=24, K=1, agsizes = rep(30,N)){
 get_delta_cont_hmm = function(theta.star, t, N=3, L=24, K=1){
   beta = matrix(theta.star[1:(N*(N-1)*(1+2*K))], nrow=N*(N-1), ncol=1+2*K)
   todseq = (t + 1:L) %% L
-  Gamma = Lcpp::tpm_p(tod=todseq, L=L, beta=beta, degree=K)
-  delta = Lcpp::stationary_p(Gamma, t=1)
+  Gamma = LaMa::tpm_p(tod=todseq, L=L, beta=beta, degree=K)
+  delta = LaMa::stationary_p(Gamma, t=1)
   delta
 }
 
@@ -849,7 +849,7 @@ for(j in 1:N){
                            scale=p5_hat$sigma[j]^2/p5_hat$mu[j])*
     CircStats::dvm(muskox$angle[ind], p5_hat$mu.turn[j], p5_hat$kappa[j])
 }
-states5_large = Lcpp::viterbi_p(p5_hat$delta, p5_hat$Gamma, 
+states5_large = LaMa::viterbi_p(p5_hat$delta, p5_hat$Gamma, 
                           t(apply(p5_hat$allprobs, 1, rep, times = rep(30,3))), muskox$tod)
 p5_hat$states = rep(NA, nrow(muskox))
 p5_hat$states[which(states5_large %in% 1:30)] = 1
@@ -866,7 +866,7 @@ for(j in 1:N){
                                   scale=p2_hat$sigma[j]^2/p2_hat$mu[j])*
     CircStats::dvm(muskox$angle[ind], p2_hat$mu.turn[j], p2_hat$kappa[j])
 }
-p2_hat$states = Lcpp::viterbi_p(p2_hat$delta, p2_hat$Gamma, p2_hat$allprobs, muskox$tod)
+p2_hat$states = LaMa::viterbi_p(p2_hat$delta, p2_hat$Gamma, p2_hat$allprobs, muskox$tod)
 p2_hat$empmpf = empirical_pmf(p2_hat$states, rep(30,3))
 
 # HSMM
@@ -877,7 +877,7 @@ for(j in 1:N){
                                   scale=p4_hat$sigma[j]^2/p4_hat$mu[j])*
     CircStats::dvm(muskox$angle[ind], p4_hat$mu.turn[j], p4_hat$kappa[j])
 }
-states4_large = Lcpp::viterbi(p4_hat$delta, p4_hat$Gamma, 
+states4_large = LaMa::viterbi(p4_hat$delta, p4_hat$Gamma, 
                                 t(apply(p4_hat$allprobs, 1, rep, times = rep(20,3))))
 p4_hat$states = rep(NA, nrow(muskox))
 p4_hat$states[which(states4_large %in% 1:20)] = 1

@@ -48,12 +48,7 @@ ddwell_hsmm = function(r, # scalar or vector of dwell times for which to compute
   if(state > 1){aggr_ind = cumsum(aggr_sizes)[state-1]+1:aggr_sizes[state]
   } else{aggr_ind = 1:aggr_sizes[1]}
   I = setdiff(1:sum(aggr_sizes), aggr_ind)
-  # delta = matrix(NA, L, largeN)
-  # GammaT = Gamma[[1]]
-  # for (j in 2:L){ GammaT=GammaT%*%Gamma[[j]] }
-  # delta[1,] = solve(t(diag(largeN)-GammaT+1),rep(1,largeN))
-  # for(k in 2:L){ delta[k,] = delta[k-1,]%*%Gamma[[k-1]] }
-  delta = Lcpp::stationary_p(Gamma)
+  delta = LaMa::stationary_p(Gamma)
   weights = numeric(L)
   weights[1] = sum(delta[L,I] * Gamma[I,I_minus,L])
   for (t in 2:L){ 

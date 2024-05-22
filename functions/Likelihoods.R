@@ -8,8 +8,8 @@
 ### homogeneous
 partransform = function(theta.star, N=3){
   p = list()
-  p$Gamma = Lcpp::tpm(theta.star[1:(N*(N-1))])
-  p$delta = Lcpp::stationary(p$Gamma)
+  p$Gamma = LaMa::tpm(theta.star[1:(N*(N-1))])
+  p$delta = LaMa::stationary(p$Gamma)
   p$mu = exp(theta.star[N*(N-1)+1:N])
   p$sigma = exp(theta.star[N*(N-1)+N+1:N])
   p$mu.turn = c(pi,0,0)
@@ -24,15 +24,15 @@ mllk = function(theta.star, X, N=3, ptransform){
     allprobs[ind,j] = dgamma(X$step[ind],shape=p$mu[j]^2/p$sigma[j]^2,scale=p$sigma[j]^2/p$mu[j])*
       CircStats::dvm(X$angle[ind], p$mu.turn[j], p$kappa[j])
   }
-  -Lcpp::forward(p$delta, p$Gamma, allprobs)
+  -LaMa::forward(p$delta, p$Gamma, allprobs)
 }
 
 ### inhomogeneous
 partransform_p = function(theta.star, N=3, L=24, K, t1){
   p = list()
   p$beta = matrix(theta.star[1:(N*(N-1)*(1+2*K))], nrow=N*(N-1), ncol=1+2*K)
-  p$Gamma = Lcpp::tpm_p(tod=1:L, L=L, beta=p$beta, degree=K)
-  p$delta = Lcpp::stationary_p(p$Gamma, t1)
+  p$Gamma = LaMa::tpm_p(tod=1:L, L=L, beta=p$beta, degree=K)
+  p$delta = LaMa::stationary_p(p$Gamma, t1)
   p$mu = exp(theta.star[(1+2*K)*N*(N-1)+1:N])
   p$sigma = exp(theta.star[(1+2*K)*N*(N-1)+N+1:N])
   p$mu.turn = c(pi,0,0)
@@ -47,7 +47,7 @@ mllk_p = function(theta.star, X, N=3, L=24, K=1, ptransform_p){
     allprobs[ind,j] = dgamma(X$step[ind],shape=p$mu[j]^2/p$sigma[j]^2,scale=p$sigma[j]^2/p$mu[j])*
       CircStats::dvm(X$angle[ind], p$mu.turn[j], p$kappa[j])
   }
-  -Lcpp::forward_p(p$delta, p$Gamma, allprobs, X$tod)
+  -LaMa::forward_p(p$delta, p$Gamma, allprobs, X$tod)
 }
 
 
@@ -77,8 +77,8 @@ partransform_s = function(theta.star, N=3, agsizes){
     dm[[j]] = dnbinom(1:agsizes[j]-1, mu = p$mu_dwell[j], size = 1/p$phi_dwell[j])
   }
   p$dm = dm
-  p$Gamma = Lcpp::tpm_hsmm(omega, dm)
-  p$delta = Lcpp::stationary(p$Gamma)
+  p$Gamma = LaMa::tpm_hsmm(omega, dm)
+  p$delta = LaMa::stationary(p$Gamma)
   return(p)
 }
 mllk_s = function(theta.star, X, N=3, agsizes){
@@ -90,7 +90,7 @@ mllk_s = function(theta.star, X, N=3, agsizes){
     allprobs[ind,j] = dgamma(X$step[ind],shape=p$mu[j]^2/p$sigma[j]^2,scale=p$sigma[j]^2/p$mu[j])*
       CircStats::dvm(X$angle[ind], p$mu.turn[j], p$kappa[j])
   }
-  -Lcpp::forward_s(p$delta, p$Gamma, allprobs, agsizes)
+  -LaMa::forward_s(p$delta, p$Gamma, allprobs, agsizes)
 }
 
 ### inhomogeneous
@@ -113,7 +113,7 @@ partransform_sp = function(theta.star, N=3, L=24, K, agsizes, t1){
   }else{ omega = matrix(c(0,1,1,0),2,2) }
   p$omega = omega
   # dwell-time distributions and approximating tpm
-  Z = Lcpp::trigBasisExp(tod=1:L, L=L, degree = K)
+  Z = LaMa::trigBasisExp(tod=1:L, L=L, degree = K)
   p$Mu_dwell = exp(cbind(1,Z)%*%t(p$beta_mu))
   dm = list()
   for(j in 1:N){
@@ -123,8 +123,8 @@ partransform_sp = function(theta.star, N=3, L=24, K, agsizes, t1){
     }
   }
   p$dm = dm
-  p$Gamma = Lcpp::tpm_phsmm(omega, dm)
-  p$delta = Lcpp::stationary_p(p$Gamma, t = t1)
+  p$Gamma = LaMa::tpm_phsmm(omega, dm)
+  p$delta = LaMa::stationary_p(p$Gamma, t = t1)
   return(p)
 }
 mllk_sp = function(theta.star, X, N=3, L=24, K, agsizes){
@@ -137,7 +137,7 @@ mllk_sp = function(theta.star, X, N=3, L=24, K, agsizes){
       CircStats::dvm(X$angle[ind], p$mu.turn[j], p$kappa[j])
   }
   allprobs_large = t(apply(allprobs, 1, rep, times = agsizes))
-  -Lcpp::forward_p(delta=p$delta, Gamma=p$Gamma, allprobs=allprobs_large, tod=X$tod)
+  -LaMa::forward_p(delta=p$delta, Gamma=p$Gamma, allprobs=allprobs_large, tod=X$tod)
 }
 
 
@@ -162,8 +162,8 @@ partransform_sp2 = function(theta.star, N=3, L=24, K=c(1,1), agsizes, t1){
   p$omega = omega
   # dwell-time distributions and approximating tpm
   
-  Z1 = Lcpp::trigBasisExp(tod=1:L, L=L, degree=K[1])
-  Z2 = Lcpp::trigBasisExp(tod=1:L, L=L, degree=K[2])
+  Z1 = LaMa::trigBasisExp(tod=1:L, L=L, degree=K[1])
+  Z2 = LaMa::trigBasisExp(tod=1:L, L=L, degree=K[2])
   p$Mu_dwell = exp(cbind(1,Z1)%*%t(p$beta_Mu))
   p$Phi_dwell = exp(cbind(1,Z2)%*%t(p$beta_Phi))
   dm = list()
@@ -172,8 +172,8 @@ partransform_sp2 = function(theta.star, N=3, L=24, K=c(1,1), agsizes, t1){
                      size = 1/p$Phi_dwell[,j])
   }
   p$dm = dm
-  p$Gamma = Lcpp::tpm_phsmm(omega, dm)
-  p$delta = Lcpp::stationary_p(p$Gamma, t = t1)
+  p$Gamma = LaMa::tpm_phsmm(omega, dm)
+  p$delta = LaMa::stationary_p(p$Gamma, t = t1)
   return(p)
 }
 mllk_sp2 = function(theta.star, X, N=3, L=24, K=c(1,1), agsizes){
@@ -186,7 +186,7 @@ mllk_sp2 = function(theta.star, X, N=3, L=24, K=c(1,1), agsizes){
       CircStats::dvm(X$angle[ind], p$mu.turn[j], p$kappa[j])
   }
   allprobs_large = t(apply(allprobs, 1, rep, times = agsizes))
-  -Lcpp::forward_p(p$delta, p$Gamma, allprobs_large, X$tod)
+  -LaMa::forward_p(p$delta, p$Gamma, allprobs_large, X$tod)
 }
 
 ### inhomogeneous in dwell time mean and omega
@@ -201,7 +201,7 @@ partransform_sp3 = function(theta.star, N=3, L=24, K, agsizes, t1){
   p$mu.turn = c(pi,0,0)
   p$kappa = exp(theta.star[N*(1+2*K)+3*N+1:N])
   p$beta_omega = matrix(theta.star[N*(1+2*K)+4*N+1:(N*(N-2)*(1+2*K))], nrow = N)
-  Z = Lcpp::trigBasisExp(tod=1:L, L=L, degree = K)
+  Z = LaMa::trigBasisExp(tod=1:L, L=L, degree = K)
   p$expEta_omega = exp(cbind(1, Z)%*%t(p$beta_omega))
   # parameter transform: inhomogeneous omega
   if(N>2){ # only needed if N>2
@@ -223,8 +223,8 @@ partransform_sp3 = function(theta.star, N=3, L=24, K, agsizes, t1){
     }
   }
   p$dm = dm
-  p$Gamma = Lcpp::tpm_phsmm(p$omega, dm)
-  p$delta = Lcpp::stationary_p(p$Gamma, t = t1)
+  p$Gamma = LaMa::tpm_phsmm(p$omega, dm)
+  p$delta = LaMa::stationary_p(p$Gamma, t = t1)
   return(p)
 }
 mllk_sp3 = function(theta.star, X, N=3, L=24, K, agsizes){
@@ -237,7 +237,7 @@ mllk_sp3 = function(theta.star, X, N=3, L=24, K, agsizes){
       CircStats::dvm(X$angle[ind], p$mu.turn[j], p$kappa[j])
   }
   allprobs_large = t(apply(allprobs, 1, rep, times = agsizes))
-  -Lcpp::forward_p(delta=p$delta, Gamma=p$Gamma, allprobs=allprobs_large, tod=X$tod)
+  -LaMa::forward_p(delta=p$delta, Gamma=p$Gamma, allprobs=allprobs_large, tod=X$tod)
 }
 ### inhomogeneous in dwell time mean and omega
 partransform_sp3 = function(theta.star, N=3, L=24, K, agsizes, t1){
@@ -251,7 +251,7 @@ partransform_sp3 = function(theta.star, N=3, L=24, K, agsizes, t1){
   p$mu.turn = c(pi,0,0)
   p$kappa = exp(theta.star[N*(1+2*K)+3*N+1:N])
   p$beta_omega = matrix(theta.star[N*(1+2*K)+4*N+1:(N*(N-2)*(1+2*K))], nrow = N)
-  Z = Lcpp::trigBasisExp(tod=1:L, L=L, degree = K)
+  Z = LaMa::trigBasisExp(tod=1:L, L=L, degree = K)
   p$expEta_omega = exp(cbind(1, Z)%*%t(p$beta_omega))
   # parameter transform: inhomogeneous omega
   if(N>2){ # only needed if N>2
@@ -273,8 +273,8 @@ partransform_sp3 = function(theta.star, N=3, L=24, K, agsizes, t1){
     }
   }
   p$dm = dm
-  p$Gamma = Lcpp::tpm_phsmm(p$omega, dm)
-  p$delta = Lcpp::stationary_p(p$Gamma, t = t1)
+  p$Gamma = LaMa::tpm_phsmm(p$omega, dm)
+  p$delta = LaMa::stationary_p(p$Gamma, t = t1)
   return(p)
 }
 mllk_sp3 = function(theta.star, X, N=3, L=24, K, agsizes){
@@ -287,7 +287,7 @@ mllk_sp3 = function(theta.star, X, N=3, L=24, K, agsizes){
       CircStats::dvm(X$angle[ind], p$mu.turn[j], p$kappa[j])
   }
   allprobs_large = t(apply(allprobs, 1, rep, times = agsizes))
-  -Lcpp::forward_p(delta=p$delta, Gamma=p$Gamma, allprobs=allprobs_large, tod=X$tod)
+  -LaMa::forward_p(delta=p$delta, Gamma=p$Gamma, allprobs=allprobs_large, tod=X$tod)
 }
 
 
@@ -304,9 +304,9 @@ partransform_sp4 = function(theta.star, N=3, L=24, K=c(1,1,1), agsizes, t1){
   p$kappa = exp(theta.star[N*(2+2*(K[1]+K[2]))+2*N+1:N])
   
   p$beta_omega = matrix(theta.star[N*(2+2*(K[1]+K[2]))+3*N + 1:(N*(N-2)*(1+2*K[3]))], nrow = N)
-  Z1 = Lcpp::trigBasisExp(tod=1:L, L=L, degree = K[1])
-  Z2 = Lcpp::trigBasisExp(tod=1:L, L=L, degree = K[2])
-  Z3 = Lcpp::trigBasisExp(tod=1:L, L=L, degree = K[3])
+  Z1 = LaMa::trigBasisExp(tod=1:L, L=L, degree = K[1])
+  Z2 = LaMa::trigBasisExp(tod=1:L, L=L, degree = K[2])
+  Z3 = LaMa::trigBasisExp(tod=1:L, L=L, degree = K[3])
   p$expEta_omega = exp(cbind(1, Z3)%*%t(p$beta_omega))
   # parameter transform: inhomogeneous omega
   if(N>2){ # only needed if N>2
@@ -329,8 +329,8 @@ partransform_sp4 = function(theta.star, N=3, L=24, K=c(1,1,1), agsizes, t1){
     }
   }
   p$dm = dm
-  p$Gamma = Lcpp::tpm_phsmm(p$omega, dm)
-  p$delta = Lcpp::stationary_p(p$Gamma, t = t1)
+  p$Gamma = LaMa::tpm_phsmm(p$omega, dm)
+  p$delta = LaMa::stationary_p(p$Gamma, t = t1)
   return(p)
 }
 mllk_sp4 = function(theta.star, X, N=3, L=24, K=c(1,1,1), agsizes){
@@ -344,6 +344,6 @@ mllk_sp4 = function(theta.star, X, N=3, L=24, K=c(1,1,1), agsizes){
   }
   allprobs_large = t(apply(allprobs, 1, rep, times = agsizes))
   
-  -Lcpp::forward_p(delta=p$delta, Gamma=p$Gamma, allprobs=allprobs_large, tod=X$tod)
+  -LaMa::forward_p(delta=p$delta, Gamma=p$Gamma, allprobs=allprobs_large, tod=X$tod)
 }
 

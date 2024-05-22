@@ -11,7 +11,7 @@ sim_phsmm = function(n, beta, omega, stateparams, L=24, K=1, seed = 123){
   kappa = stateparams$kappa
   
   N = dim(omega)[1]
-  Z = Lcpp::trigBasisExp(1:L, L, degree = K)
+  Z = LaMa::trigBasisExp(1:L, L, degree = K)
   Lambda = exp(cbind(1, Z)%*%t(beta))
   n_tilde = ceiling(n / (1+mean(apply(Lambda, 1, mean)))*1.5) # crude estimate of distinct # of stays
   
@@ -45,27 +45,27 @@ sim_phsmm = function(n, beta, omega, stateparams, L=24, K=1, seed = 123){
 }
 
 
-beta = matrix(c(log(c(5,8,7)), -0.2, 0.2, -0.5, 0.3, -0.2, -0.2), nrow = 3)
-omega = matrix(c(0, 0.7, 0.3, 
-                 0.2, 0, 0.8,
-                 0.5, 0.5, 0), nrow = 3, byrow = TRUE)
-
-color = c("orange", "deepskyblue", "seagreen2")
-Ztod = cbind(1, Lcpp::trigBasisExp(seq(1,24,length=200), 24))
-dM = exp(Ztod%*%t(beta))
-plot(dM[,1], type = "l", ylim = c(0,15), col = color[1])
-lines(dM[,2], type = "l", col = color[2])
-lines(dM[,3], type = "l", col = color[3])
-
-lambda = colMeans(dM)
-
-stateparams = list(
-  mu = c(10, 100, 700),
-  sigma = c(10, 80, 500),
-  kappa = c(0.2, 1, 2.5)
-)
-
-data = sim_phsmm(1000, beta, omega, stateparams)
+# beta = matrix(c(log(c(5,8,7)), -0.2, 0.2, -0.5, 0.3, -0.2, -0.2), nrow = 3)
+# omega = matrix(c(0, 0.7, 0.3, 
+#                  0.2, 0, 0.8,
+#                  0.5, 0.5, 0), nrow = 3, byrow = TRUE)
+# 
+# color = c("orange", "deepskyblue", "seagreen2")
+# Ztod = cbind(1, LaMa::trigBasisExp(seq(1,24,length=200), 24))
+# dM = exp(Ztod%*%t(beta))
+# plot(dM[,1], type = "l", ylim = c(0,15), col = color[1])
+# lines(dM[,2], type = "l", col = color[2])
+# lines(dM[,3], type = "l", col = color[3])
+# 
+# lambda = colMeans(dM)
+# 
+# stateparams = list(
+#   mu = c(10, 100, 700),
+#   sigma = c(10, 80, 500),
+#   kappa = c(0.2, 1, 2.5)
+# )
+# 
+# data = sim_phsmm(1000, beta, omega, stateparams)
 
 
 # Functions for fitting models --------------------------------------------
@@ -77,18 +77,18 @@ mllkHMM = function(theta.star, X, Z, ind, N=3, L=24, K=1){
   sigma = exp(theta.star[N+1:N])
   kappa = exp(theta.star[2*N + 1:N])
   beta = matrix(theta.star[3*N + 1:(N*(N-1)*(1+2*K))], nrow = N*(N-1), ncol = 1+2*K)
-  Gamma = Lcpp::tpm_p(tod=1:L, L=L, beta=beta, degree=K, Z=Z)
-  delta = Lcpp::stationary_p(Gamma, t = X$tod[1])
+  Gamma = LaMa::tpm_p(tod=1:L, L=L, beta=beta, degree=K, Z=Z)
+  delta = LaMa::stationary_p(Gamma, t = X$tod[1])
   allprobs = matrix(NA, nrow = n, ncol = N)
   for(j in 1:N){
     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
       CircStats::dvm(X$angle[ind], mu = 0, kappa = kappa[j])
   }
-  -Lcpp::forward_p(delta, Gamma, allprobs, X$tod)
+  -LaMa::forward_p(delta, Gamma, allprobs, X$tod)
 }
 
 fitHMM = function(data, stateparams, N=3, L=24, K=1){
-  Z = Lcpp::trigBasisExp(1:L, L=L, degree=K)
+  Z = LaMa::trigBasisExp(1:L, L=L, degree=K)
   ind = which(!is.na(data$step) & !is.na(data$angle))
   
   thetainit = c(log(c(stateparams$mu,
@@ -109,8 +109,8 @@ fitHMM = function(data, stateparams, N=3, L=24, K=1){
     sigma = exp(theta.star[N+1:N])
     kappa = exp(theta.star[2*N + 1:N])
     beta = matrix(theta.star[3*N + 1:(N*(N-1)*(1+2*K))], nrow = N*(N-1), ncol = 1+2*K)
-    Gamma = Lcpp::tpm_p(tod=1:L, L=L, beta=beta, degree=K, Z=Z)
-    Delta = Lcpp::stationary_p(Gamma)
+    Gamma = LaMa::tpm_p(tod=1:L, L=L, beta=beta, degree=K, Z=Z)
+    Delta = LaMa::stationary_p(Gamma)
     
     return(
       list(llk = -mod$minimum, time = est_time, beta=beta, Gamma=Gamma, Delta=Delta, mu=mu, sigma=sigma, kappa=kappa)
@@ -137,15 +137,15 @@ mllkHSMM = function(theta.star, X, ind, N=3, agsizes){
   }else{ omega = matrix(c(0,1,1,0),2,2) }
   dm = list()
   for(j in 1:N){ dm[[j]] = dpois(1:agsizes[j]-1, lambda[j]) }
-  Gamma = Lcpp::tpm_hsmm(omega, dm)
-  delta = Lcpp::stationary(Gamma)
+  Gamma = LaMa::tpm_hsmm(omega, dm)
+  delta = LaMa::stationary(Gamma)
   
   allprobs = matrix(NA, nrow = n, ncol = N)
   for(j in 1:N){
     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
       CircStats::dvm(X$angle[ind], mu = 0, kappa = kappa[j])
   }
-  -Lcpp::forward_s(delta, Gamma, allprobs, agsizes)
+  -LaMa::forward_s(delta, Gamma, allprobs, agsizes)
 }
 
 fitHSMM = function(data, lambda, stateparams, agsizes=rep(20,N), N=3, L=24, K=1){
@@ -178,8 +178,8 @@ fitHSMM = function(data, lambda, stateparams, agsizes=rep(20,N), N=3, L=24, K=1)
       omega = t(omega)/apply(omega,2,sum)
     }else{ omega = matrix(c(0,1,1,0),2,2) }
     for(j in 1:N){ dm[[j]] = dpois(1:agsizes[j]-1, lambda[j]) }
-    Gamma = Lcpp::tpm_hsmm(omega, dm)
-    delta = Lcpp::stationary(Gamma)
+    Gamma = LaMa::tpm_hsmm(omega, dm)
+    delta = LaMa::stationary(Gamma)
     
     return(
       list(llk = -mod$minimum, time = est_time, lambda=lambda, omega=omega, mu=mu, sigma=sigma, kappa=kappa, Gamma=Gamma, delta=delta)
@@ -207,8 +207,8 @@ mllkpHSMM = function(theta.star, X, Z, ind, N=3, L=24, K=1, agsizes){
   for(j in 1:N){ 
     dm[[j]] = sapply(1:agsizes[j]-1, dpois, lambda = Lambda[,j])
   }
-  Gamma = Lcpp::tpm_phsmm(omega, dm)
-  delta = Lcpp::stationary_p(Gamma, t = X$tod[1])
+  Gamma = LaMa::tpm_phsmm(omega, dm)
+  delta = LaMa::stationary_p(Gamma, t = X$tod[1])
   
   allprobs = matrix(NA, nrow = n, ncol = N)
   for(j in 1:N){
@@ -216,12 +216,12 @@ mllkpHSMM = function(theta.star, X, Z, ind, N=3, L=24, K=1, agsizes){
       CircStats::dvm(X$angle[ind], mu = 0, kappa = kappa[j])
   }
   allprobs_large = t(apply(allprobs, 1, rep, times = agsizes))
-  -Lcpp::forward_p(delta, Gamma, allprobs_large, X$tod)
+  -LaMa::forward_p(delta, Gamma, allprobs_large, X$tod)
 }
 
 fitpHSMM = function(data, beta, stateparams, agsizes=rep(30,N), N=3, L=24, K=1, stepmax = 20){
-  Z = Lcpp::trigBasisExp(1:L-1, L=L, degree=K)
-  # indexshift is because in Lcpp gamma^(t) = Pr(S_t | S_t-1) while in this paper gamma^(t) = Pr(S_t+1 | S_t)
+  Z = LaMa::trigBasisExp(1:L-1, L=L, degree=K)
+  # indexshift is because in LaMa gamma^(t) = Pr(S_t | S_t-1) while in this paper gamma^(t) = Pr(S_t+1 | S_t)
   ind = which(!is.na(data$step) & !is.na(data$angle))
   
   thetainit = c(log(c(stateparams$mu,
@@ -255,8 +255,8 @@ fitpHSMM = function(data, beta, stateparams, agsizes=rep(30,N), N=3, L=24, K=1, 
     for(j in 1:N){ 
       dm[[j]] = sapply(1:agsizes[j]-1, dpois, lambda = Lambda[,j])
     }
-    Gamma = Lcpp::tpm_phsmm(omega, dm)
-    delta = Lcpp::stationary_p(Gamma, t = data$tod[1])
+    Gamma = LaMa::tpm_phsmm(omega, dm)
+    delta = LaMa::stationary_p(Gamma, t = data$tod[1])
     
     return(
       list(llk = -mod$minimum, time = est_time, beta=beta, Lambda=Lambda, 
