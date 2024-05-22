@@ -39,6 +39,8 @@ for(t in 1:24){
 }
 plot(1:24, means, type = "h", lwd = 4)
 
+color = c("orange", "deepskyblue", "seagreen2")
+
 pdf("./figures/muskox_boxplot.pdf", width = 6, height = 3)
 par(mfrow = c(1,1), mar = c(4.5,4,1.5,2)+0.1)
 boxplot(muskox$step ~ muskox$tod, pch = 20, col = "gray95", lwd = 0.5, outcol = "#00000010", 
@@ -221,6 +223,7 @@ axis(1, at = seq(0,24,by = 4), labels = seq(0,24,by = 4))
 source("./functions/dwell_functions.R")
 
 pmf7 = list()
+N=3
 for(j in 1:N){
   pmf7[[j]] = ddwell_hsmm(1:40, j, p7_hat$dm, p7_hat$Gamma, rep(40,3))
 }
