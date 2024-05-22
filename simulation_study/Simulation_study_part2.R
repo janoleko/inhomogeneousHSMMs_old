@@ -4,7 +4,7 @@ source("./functions/sim_study_functions.R")
 
 # libraries
 library(parallel)
-library(Lcpp)
+library(LaMa)
 
 
 # Part 2: aggregate sizes -------------------------------------------------
@@ -31,7 +31,7 @@ stateparams = list(
 )
 
 # trigonometric basis expansion
-Z = cbind(1, Lcpp::trigBasisExp(1:24, 24))
+Z = cbind(1, LaMa::trigBasisExp(1:24, 24))
 # calculating all dwell time means
 dM = exp(Z%*%t(beta))
 

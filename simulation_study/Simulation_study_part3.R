@@ -4,7 +4,7 @@ source("./functions/sim_study_functions.R")
 
 # libraries
 library(parallel)
-library(Lcpp)
+library(LaMa)
 
 
 # Part 2: aggregate sizes -------------------------------------------------
@@ -21,7 +21,7 @@ stateparams = list(
 )
 
 # trigonometric basis expansion
-Z = cbind(1, Lcpp::trigBasisExp(1:24, 24))
+Z = cbind(1, LaMa::trigBasisExp(1:24, 24))
 # calculating all dwell time means
 dM = exp(Z%*%t(beta))
 
@@ -70,8 +70,8 @@ library(optimParallel)
 ## Model 1: true periodic HSMM
 
 L = 24; K = 1
-Z = Lcpp::trigBasisExp(1:L-1, L=L, degree=K)
-# indexshift is because in Lcpp gamma^(t) = Pr(S_t | S_t-1) while in this paper gamma^(t) = Pr(S_t+1 | S_t)
+Z = LaMa::trigBasisExp(1:L-1, L=L, degree=K)
+# indexshift is because in LaMa gamma^(t) = Pr(S_t | S_t-1) while in this paper gamma^(t) = Pr(S_t+1 | S_t)
 ind = which(!is.na(data$step) & !is.na(data$angle))
 
 thetainit = c(log(c(stateparams$mu,
@@ -96,7 +96,7 @@ modpHSMM = readRDS("./simulation_study/models/modpHSMM.rds")
 
 ## Model 2: periodic HMM
 
-Z = Lcpp::trigBasisExp(1:L-1, L=L, degree=K)
+Z = LaMa::trigBasisExp(1:L-1, L=L, degree=K)
 
 thetainit = c(log(c(stateparams$mu,
                     stateparams$sigma,
@@ -145,7 +145,7 @@ modpHSMM$mu = exp(modpHSMM$estimate[1:N])
 modpHSMM$sigma = exp(modpHSMM$estimate[N+1:N])
 modpHSMM$kappa = exp(modpHSMM$estimate[2*N + 1:N])
 modpHSMM$beta = matrix(modpHSMM$estimate[3*N + 1:(N*(1+2*K))], nrow = N, ncol = 1+2*K)
-Z = Lcpp::trigBasisExp(1:L-1, L=L, degree=K)
+Z = LaMa::trigBasisExp(1:L-1, L=L, degree=K)
 modpHSMM$Lambda = exp(cbind(1,Z)%*%t(modpHSMM$beta))
 if(N>2){ # only needed if N>2
   omega = matrix(0,N,N)
@@ -156,8 +156,8 @@ modpHSMM$omega = omega
 dm = list()
 for(j in 1:N){ dm[[j]] = sapply(1:agsizes[j]-1, dpois, lambda = modpHSMM$Lambda[,j]) }
 modpHSMM$dm = dm
-modpHSMM$Gamma = Lcpp::tpm_phsmm(omega, dm)
-modpHSMM$delta = Lcpp::stationary_p(modpHSMM$Gamma, t = data$tod[1])
+modpHSMM$Gamma = LaMa::tpm_phsmm(omega, dm)
+modpHSMM$delta = LaMa::stationary_p(modpHSMM$Gamma, t = data$tod[1])
 
 ind = which(!is.na(data$step) & !is.na(data$angle))
 modpHSMM$allprobs = matrix(NA, nrow = 1e6, ncol = N)
@@ -166,7 +166,7 @@ for(j in 1:N){
     CircStats::dvm(data$angle[ind], mu = 0, kappa = modpHSMM$kappa[j])
 }
 allprobs_large = t(apply(modpHSMM$allprobs, 1, rep, times = agsizes))
-states = Lcpp::viterbi_p(modpHSMM$delta, modpHSMM$Gamma, allprobs_large, data$tod)
+states = LaMa::viterbi_p(modpHSMM$delta, modpHSMM$Gamma, allprobs_large, data$tod)
 modpHSMM$rawstates = states
 states = rep(NA, 1e6)
 for(j in 1:N){
@@ -180,10 +180,10 @@ modpHSMM$dec_accuracy = sum(modpHSMM$states==data$C)/1e6
 modpHMM$mu = exp(modpHMM$estimate[1:N])
 modpHMM$sigma = exp(modpHMM$estimate[N+1:N])
 modpHMM$kappa = exp(modpHMM$estimate[2*N + 1:N])
-Z = Lcpp::trigBasisExp(1:L, L=L, degree=K)
+Z = LaMa::trigBasisExp(1:L, L=L, degree=K)
 modpHMM$beta = matrix(modpHMM$estimate[3*N + 1:(N*(N-1)*(1+2*K))], nrow = N*(N-1), ncol = 1+2*K)
-modpHMM$Gamma = Lcpp::tpm_p(tod=1:L, L=L, beta=modpHMM$beta, degree=K, Z=Z)
-modpHMM$delta = Lcpp::stationary_p(modpHMM$Gamma, t = data$tod[1])
+modpHMM$Gamma = LaMa::tpm_p(tod=1:L, L=L, beta=modpHMM$beta, degree=K, Z=Z)
+modpHMM$delta = LaMa::stationary_p(modpHMM$Gamma, t = data$tod[1])
 
 ind = which(!is.na(data$step) & !is.na(data$angle))
 allprobs = matrix(NA, nrow = 1e6, ncol = N)
@@ -192,7 +192,7 @@ for(j in 1:N){
     CircStats::dvm(data$angle[ind], mu = 0, kappa = modpHMM$kappa[j])
 }
 modpHMM$allprobs = allprobs
-modpHMM$states = Lcpp::viterbi_p(modpHMM$delta, modpHMM$Gamma, modpHMM$allprobs, data$tod)
+modpHMM$states = LaMa::viterbi_p(modpHMM$delta, modpHMM$Gamma, modpHMM$allprobs, data$tod)
 modpHMM$dec_accuracy = sum(modpHMM$states==data$C)/1e6
 
 ## HSMM
@@ -208,8 +208,8 @@ if(N>2){ # only needed if N>2
 modHSMM$omega = omega
 for(j in 1:N){ dm[[j]] = dpois(1:agsizes[j]-1, modHSMM$lambda[j]) }
 modHSMM$dm = dm
-modHSMM$Gamma = Lcpp::tpm_hsmm(omega, dm)
-modHSMM$delta = Lcpp::stationary(modHSMM$Gamma)
+modHSMM$Gamma = LaMa::tpm_hsmm(omega, dm)
+modHSMM$delta = LaMa::stationary(modHSMM$Gamma)
 
 ind = which(!is.na(data$step) & !is.na(data$angle))
 modHSMM$allprobs = matrix(NA, nrow = 1e6, ncol = N)
@@ -218,7 +218,7 @@ for(j in 1:N){
     CircStats::dvm(data$angle[ind], mu = 0, kappa = modHSMM$kappa[j])
 }
 allprobs_large = t(apply(modHSMM$allprobs, 1, rep, times = agsizes))
-modHSMM$rawstates = Lcpp::viterbi(modHSMM$delta, modHSMM$Gamma, allprobs_large)
+modHSMM$rawstates = LaMa::viterbi(modHSMM$delta, modHSMM$Gamma, allprobs_large)
 states = rep(NA, 1e6)
 for(j in 1:N){ states[which(modHSMM$rawstates %in% c(c(0,cumsum(agsizes)[-N])[j]+1:agsizes[j]))] = j }
 modHSMM$states = states
@@ -407,7 +407,7 @@ cumagsizes = c(0, cumsum(agsizes[-N]))
 for(i in 1:100){
   cat("\n",i)
   allprobs_large = t(apply(modpHSMM$allprobs[1e4*(i-1)+1:1e4,], 1, rep, times = agsizes))
-  stateprobs_large = Lcpp::stateprobs_p(modpHSMM$delta, modpHSMM$Gamma, allprobs_large, tod = data$tod[1e4*(i-1)+1:1e4])
+  stateprobs_large = LaMa::stateprobs_p(modpHSMM$delta, modpHSMM$Gamma, allprobs_large, tod = data$tod[1e4*(i-1)+1:1e4])
   for(j in 1:N){
     stateprobs[1e4*(i-1)+1:1e4, j] = rowSums(stateprobs_large[,cumagsizes[j]+1:agsizes[j]])
   }
@@ -416,7 +416,7 @@ modpHSMM$stateprobs = stateprobs
 modpHSMM$pseudores_step = pres_step(data$step, modpHSMM$mu, modpHSMM$sigma, modpHSMM$stateprobs)
 
 # pHMM
-modpHMM$stateprobs = Lcpp::stateprobs_p(modpHMM$delta, modpHMM$Gamma, modpHMM$allprobs, tod = data$tod)
+modpHMM$stateprobs = LaMa::stateprobs_p(modpHMM$delta, modpHMM$Gamma, modpHMM$allprobs, tod = data$tod)
 modpHMM$pseudores_step = pres_step(data$step, modpHMM$mu, modpHMM$sigma, modpHMM$stateprobs)
 
 # HSMM
@@ -426,7 +426,7 @@ cumagsizes = c(0, cumsum(agsizes[-N]))
 for(i in 1:100){
   cat("\n",i)
   allprobs_large = t(apply(modHSMM$allprobs[1e4*(i-1)+1:1e4,], 1, rep, times = agsizes))
-  stateprobs_large = Lcpp::stateprobs(modHSMM$delta, modHSMM$Gamma, allprobs_large)
+  stateprobs_large = LaMa::stateprobs(modHSMM$delta, modHSMM$Gamma, allprobs_large)
   for(j in 1:N){
     stateprobs[1e4*(i-1)+1:1e4, j] = rowSums(stateprobs_large[,cumagsizes[j]+1:agsizes[j]])
   }

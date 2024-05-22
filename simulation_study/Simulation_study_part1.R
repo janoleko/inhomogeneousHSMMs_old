@@ -4,7 +4,7 @@ source("./functions/sim_study_functions.R")
 
 # libraries
 library(parallel)
-library(Lcpp)
+library(LaMa)
 
 # Part 1: Consistency -----------------------------------------------------
 
@@ -31,7 +31,7 @@ color = c("orange", "deepskyblue", "seagreen2")
 
 # looking at dwell time mean as a function of the time of day
 todseq = seq(0,24,length=200)
-Ztod = cbind(1, Lcpp::trigBasisExp(todseq, 24))
+Ztod = cbind(1, LaMa::trigBasisExp(todseq, 24))
 dM = exp(Ztod%*%t(beta))
 plot(todseq, dM[,1], type = "l", ylim = c(0,15), col = color[1], lwd=2, bty="n", 
      ylab = "mean dwell time", xlab = "time of day", xaxt = "n")
