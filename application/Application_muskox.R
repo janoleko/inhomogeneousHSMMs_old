@@ -6,6 +6,11 @@ library(PHSMM)
 library(CircStats)
 library(optimParallel)
 library(LaMa)
+library(sf)
+library(ggplot2)
+library(rnaturalearth)
+library(patchwork)
+
 
 # Data --------------------------------------------------------------------
 
@@ -23,15 +28,83 @@ sum(is.na(muskox$angle))
 
 # EDA ---------------------------------------------------------------------
 
-# raw time series
-plot(muskox$x, muskox$y, xlab = "UTM easting", ylab = "UTM northing", type = "l", bty = "n")
+# track on map
+## first convert UTM to lontitude and latitude
 
-plot(muskox$step, type = "h", bty = "n", ylab = "step length (meters)")
+# Create an sf object from UTM data
+utm_sf = st_as_sf(muskox[,c("x", "y")], 
+                   coords = c("x", "y"), 
+                   crs = paste0("+proj=utm +zone=", 27, " +datum=WGS84"),
+                   na.fail = FALSE)
+# Transform the UTM coordinates to latitude and longitude (EPSG: 4326 is WGS84)
+latlon_sf = st_transform(utm_sf, crs = 4326)
+# Extract the latitude and longitude columns
+coords = data.frame(st_coordinates(latlon_sf))
+colnames(coords) = c("longitude", "latitude")
+coords$longitude[is.nan(coords$longitude)] = NA
+coords$latitude[is.nan(coords$latitude)] = NA
+
+# Create a GPS points spatial object
+gps_data <- data.frame(lon = coords$longitude, lat = coords$latitude)
+gps_sf <- st_as_sf(gps_data, coords = c("lon", "lat"), crs = 4326, na.fail = FALSE)
+
+# Get world map data from rnaturalearth
+world <- ne_countries(scale = "large", returnclass = "sf")
+
+# Plot using ggplot2
+xlim = range(coords$longitude, na.rm = T) + 0.5*c(-1, 1)
+ylim = range(coords$latitude, na.rm = T) + 0.2*c(-1, 1)
+
+## region plot showing greenland
+plot_coarse = ggplot() +
+  geom_sf(data = world, fill = "gray95") +
+  # geom_sf(data = gps_sf[1,], color = "black", size = 5) +
+  geom_rect(aes(xmin = xlim[1], xmax = xlim[2],                # Rectangle based on xlim
+                ymin = ylim[1], ymax = ylim[2]), 
+            alpha = 0.7, fill = "deepskyblue") +  
+  coord_sf(xlim = c(-55, -12), ylim = c(60,78), expand = FALSE) +
+  theme_minimal()
+
+plot_fine = ggplot() +
+  geom_sf(data = world, fill = "gray95") +
+  # geom_sf(data = gps_line, color = "black", size = .1) +  # Add the connecting line
+  geom_sf(data = gps_sf, color = "black", size = .3) +
+  coord_sf(xlim = xlim, ylim = ylim, expand = FALSE) +
+  fixed_plot_aspect(ratio = 1) +
+  theme_minimal()# +
+
+# Combine plots side by side
+combined_plot <- plot_coarse + plot_fine
+
+# Adjust the theme to reduce margins
+combined_plot <- combined_plot + theme(plot.margin = margin(0, 0, 0, 0))
+
+ggsave("./figures/maps.pdf", combined_plot, width = 10, height = 5, units = "in")
+
+
+
+
+
+# raw time series
+# plot(muskox$x, muskox$y, xlab = "UTM easting", ylab = "UTM northing", type = "l", bty = "n")
+
+pdf("./figures/muskox_step.pdf", width = 8, height = 4)
+par(mar = c(4.5,4,2,2))
+plot(muskox$step[1:1000], type = "h", bty = "n", ylab = "step length (meters)", xlab = "time")
+dev.off()
+
+# plot(muskox$step, type = "h", bty = "n", ylab = "step length (meters)")
 plot(muskox$angle, type = "h", bty = "n", ylab = "turning angle (radians)")
 
+# pdf("./figures/muskox_hist.pdf", width = 8, height = 5)
 par(mfrow = c(1,2))
-hist(muskox$step, prob = T, main = "", bor = "white", xlab = "step length (meters)", ylab = "density", xlim = c(0,600), breaks = 100)
-hist(muskox$angle, prob = T, main = "", bor = "white", xlab = "turning angle (radians)", ylab = "density", breaks = 30)
+hist(muskox$step, prob = T, main = "", bor = "white", xlab = "step length (meters)", ylab = "density", 
+     xlim = c(0,500), breaks = 100, ylim = c(0, 0.01))
+hist(muskox$angle, prob = T, breaks = 25, main = "", bor = "white", xlab = "turning angle (radians)", ylab = "density", xaxt = "n")
+axis(1, at = c(-pi, -pi/2, 0, pi/2, pi), 
+     labels = c(expression(-pi), expression(-pi/2), 
+                expression(0), expression(pi/2), expression(pi)))
+# dev.off()
 
 means = rep(NA,24)
 for(t in 1:24){
@@ -41,7 +114,7 @@ plot(1:24, means, type = "h", lwd = 4)
 
 color = c("orange", "deepskyblue", "seagreen2")
 
-pdf("./figures/muskox_boxplot.pdf", width = 6, height = 3)
+# pdf("./figures/muskox_boxplot.pdf", width = 6, height = 3)
 par(mfrow = c(1,1), mar = c(4.5,4,1.5,2)+0.1)
 boxplot(muskox$step ~ muskox$tod, pch = 20, col = "gray95", lwd = 0.5, outcol = "#00000010", 
         frame = F, xlab = "time of day", ylab = "step length (meters)", ylim = c(0,400))
@@ -49,7 +122,7 @@ points(1:24, means, type = "o", col = color[2], pch = 19)
 # lines(1:24, means, type = "b", col = color[2])
 legend(x = 18, y = 420, lwd = c(2, 1), pch = c(NA, 19), col = c("black", color[2]),
        legend = c("median", "mean"), bty = "n")
-dev.off()
+# dev.off()
 
 
 
@@ -578,7 +651,7 @@ shape = p5_hat$mu^2/p5_hat$sigma^2; scale = p5_hat$sigma^2/p5_hat$mu
 # plot state-dependent distributions
 library(CircStats)
 
-pdf("./figures/marginal.pdf", width = 7, height = 3.5)
+# pdf("./figures/marginal.pdf", width = 7, height = 3.5)
 
 m = matrix(c(1,1,2,3), nrow = 2, ncol = 2, byrow = TRUE)
 layout(mat = m, heights = c(0.15, 1, 1))
@@ -592,7 +665,7 @@ legend(x = 1.4, y = 9.5, inset = c(0.3,0), lwd = 2, lty = c(rep(1,3), 2),
 
 par(mar = c(5,4,2.2,2)+0.1)
 
-hist(muskox$step, prob = T, breaks = 100, bor = "white", xlim = c(0,600), ylim = c(0,0.015),
+hist(muskox$step, prob = T, breaks = 100, bor = "white", xlim = c(0,600), ylim = c(0,0.01),
      main = "", xlab = "step length", ylab = "density")
 curve(delta_hat[1]*dgamma(x, shape = shape[1], scale = scale[1]),
       add = T, lwd = 2, col = color[1], n = 500)
@@ -605,7 +678,7 @@ curve(delta_hat[1]*dgamma(x, shape = shape[1], scale = scale[1])+
         delta_hat[3]*dgamma(x, shape = shape[3], scale = scale[3]), add = T, lwd = 2, lty = 2)
 
 hist(muskox$angle, prob = T, breaks = 20, bor = "white", xlim = c(-pi,pi), ylim = c(0,0.3),
-     main = "", xlab = "turning angle", ylab = "density")
+     main = "", xlab = "turning angle", ylab = "density", xaxt = "n")
 curve(delta_hat[1]*dvm(x, p5_hat$mu.turn[1], p5_hat$kappa[1]),
       add = T, lwd = 2, col = color[1], n = 500)
 curve(delta_hat[2]*dvm(x, p5_hat$mu.turn[2], p5_hat$kappa[2]),
@@ -615,8 +688,10 @@ curve(delta_hat[3]*dvm(x, p5_hat$mu.turn[3], p5_hat$kappa[3]),
 curve(delta_hat[1]*dvm(x, p5_hat$mu.turn[1], p5_hat$kappa[1])+
         delta_hat[2]*dvm(x, p5_hat$mu.turn[2], p5_hat$kappa[2])+
         delta_hat[3]*dvm(x, p5_hat$mu.turn[3], p5_hat$kappa[3]), add = T, lwd = 2, lty = 2, n = 500)
-
-dev.off()
+axis(1, at = c(-pi, -pi/2, 0, pi/2, pi), 
+     labels = c(expression(-pi), expression(-pi/2), 
+                expression(0), expression(pi/2), expression(pi)))
+# dev.off()
 
 
 ## periodically stationary distribution
@@ -739,7 +814,7 @@ for(t in 1:npoints){
   }
 }
 
-pdf("./figures/stationary_p_muskox.pdf", width = 7, height = 4)
+# pdf("./figures/stationary_p_muskox.pdf", width = 7, height = 4)
 
 m = matrix(c(1,1,2,3), nrow = 2, ncol = 2, byrow = TRUE)
 layout(mat = m, heights = c(0.15, 1, 1))
@@ -775,7 +850,7 @@ for(j in 2:3){
 axis(1, at = seq(0,24,by=4), labels = seq(0,24,by=4))
 legend("top", bty = "n", legend = "inhomogeneous HMM")
 
-dev.off()
+# dev.off()
 
 
 
@@ -802,7 +877,7 @@ Museq = exp(cbind(1,Z)%*%t(p5_hat$beta_mu))+1
 color = c("orange", "deepskyblue", "seagreen2")
 statenames = c("resting", "foraging", "travelling")
 
-pdf("./figures/time_varying_distr_heat5.pdf", width = 7, height = 2.7)
+# pdf("./figures/time_varying_distr_heat5.pdf", width = 7, height = 2.7)
 
 par(mfrow = c(1,3), mar = c(5,4,4,1.5))
 for(j in 1:3){
@@ -822,7 +897,8 @@ for(j in 1:3){
   # mtext("standard deviation", side=4, line = 3)
   if(j==3) legend(x=12, y=16, bty = "n", lwd = 2, lty = 1, legend = c("mean"))
 }
-dev.off()
+
+# dev.off()
 
 
 # overall dwell-time distribution
@@ -888,7 +964,7 @@ p4_hat$states[which(states4_large %in% 21:40)] = 2
 p4_hat$states[which(states4_large %in% 41:60)] = 3
 p4_hat$empmpf = empirical_pmf(p4_hat$states, rep(30,3))
 
-pdf("./figures/overall_ddwell_muskox.pdf", width = 8, height = 4.5)
+# pdf("./figures/overall_ddwell_muskox.pdf", width = 8, height = 4.5)
 
 par(mfrow = c(3,3), mar = c(4,4,1.5,1)+0.1)
 plot(1:12, pmf5[[1]][1:12], type = "h", lwd = 2, col = color[1], bty = "n", 
@@ -924,6 +1000,6 @@ plot(1:14, p4_hat$dm[[3]][1:14], type = "h", lwd = 2, col = color[3], bty = "n",
 points(1:14, p4_hat$empmpf[[3]][1:14], pch = 19, col = "#00000030")
 legend("topright", bty = "n", legend = "homogeneous HSMM")
 
-dev.off()
+# dev.off()
 
 
