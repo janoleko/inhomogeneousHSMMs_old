@@ -81,17 +81,18 @@ for(i in 1:nruns){
 }
 
 # fitting HSMMs to data sets of increasing lengths
-for(k in 2:(length(nobs)-1)){
+for(k in 1:length(nobs)){
   cat("\nScenario", k)
   cat("\nNumber of observations:", nobs[k])
-  
+
   results = parallel::mclapply(Data, FUN = one_rep,
-                    beta=beta, omega=omega, stateparams=stateparams, 
+                    beta=beta, omega=omega, stateparams=stateparams,
                     n=nobs[k], agsizes=agsizes, stepmax = 10,
                     mc.cores = parallel::detectCores()-2)
-  saveRDS(results, 
+  saveRDS(results,
           file = paste0("./simulation_study/simulation_results/consistency/results_", nobs[k], ".rds"))
 }
+
 
 
 # Visualizing results -----------------------------------------------------
@@ -109,30 +110,32 @@ for(k in 1:length(nobs)){
   }
 }
 
-for(state in 1:3){
-  pdf(file = paste0("./figures/simulation/consistency_state", state, ".pdf"), width=8, height=5)
-  par(mfrow = c(3,4), mar = c(1.3,4.3,2.5,0.5)+0.1)
-  ylims = apply(Betas[state,,,1], 1, quantile, probs = c(0.0025, 0.9975), na.rm = TRUE)
-  for(p in 1:3){
-    for(k in 1:4){
-      if(p==1){
-        main = paste0("T = ", nobs[k])
-      } else{ main = "" }
-      if(k==1){
-        ylab = bquote({beta^(.(state))} [.(p-1)])
-      } else{ ylab = ""}
-      boxplot(Betas[state, p,,k], ylim = ylims[,p], ylab = ylab, 
-              col = "gray95", main=main)
-      abline(h = beta[state,p], col = color[state], lwd = 2)
-      # abline(h = mean(Betas[state, p,,k], na.rm = TRUE), col = "deepskyblue")
-    }
-  }
-  dev.off()
-}
+# for(state in 1:3){
+#   #pdf(file = paste0("./figures/simulation/consistency_state", state, ".pdf"), width=8, height=5)
+#   par(mfrow = c(3,4), mar = c(1.3,4.3,2.5,0.5)+0.1)
+#   ylims = apply(Betas[state,,,1], 1, quantile, probs = c(0.0025, 0.9975), na.rm = TRUE)
+#   for(p in 1:3){
+#     for(k in 1:4){
+#       if(p==1){
+#         main = paste0("T = ", nobs[k])
+#       } else{ main = "" }
+#       if(k==1){
+#         ylab = bquote({beta^(.(state))} [.(p-1)])
+#       } else{ ylab = ""}
+#       boxplot(Betas[state, p,,k], ylim = ylims[,p], ylab = ylab, 
+#               col = "gray95", main=main)
+#       abline(h = beta[state,p], col = color[state], lwd = 2)
+#       # abline(h = mean(Betas[state, p,,k], na.rm = TRUE), col = "deepskyblue")
+#     }
+#   }
+#   #dev.off()
+# }
 
 # plotting distribution of dwell-time parameters for different T's
+
+## boxplots
 for(state in 1:3){
-  pdf(file = paste0("./figures/simulation/consistency_state", state, ".pdf"), width=7.5, height=2.5)
+  #pdf(file = paste0("./figures/simulation/consistency_state", state, ".pdf"), width=7.5, height=2.5)
   par(mfrow = c(1,3), mar = c(4,4.5,1,2)+0.1)
   # ylims = apply(Betas[state,,,1], 1, quantile, probs = c(0.001, 0.999), na.rm = TRUE)
   for(p in 1:3){
@@ -147,6 +150,30 @@ for(state in 1:3){
     abline(h = beta[state,p], col = scales::alpha(color[state],0.8), lwd = 1.5)
     # abline(h = mean(Betas[state, p,,k], na.rm = TRUE), col = "deepskyblue")
   }
-  dev.off()
+  #dev.off()
 }
 
+## histograms
+for(state in 1:3){
+  # pdf(file = paste0("./figures/simulation/consistency_state_hist", state, ".pdf"), width=10, height=7)
+  par(mfrow = c(3,4), mar = c(4.7,4,4,0.2)+0.1)
+  xlims = apply(Betas[state,,,1], 1, quantile, probs = c(0.0025, 0.9975), na.rm = TRUE)
+  for(p in 1:3){
+    for(k in 1:4){
+      if(p==1){
+        main = paste0("T = ", nobs[k])
+      } else{ 
+        main = "" 
+        }
+      if(k==1){
+        xlab = bquote({beta^(.(state))} [.(p-1)])
+        ylab = "density"
+      } else{ ylab = ""}
+      hist(Betas[state, p,, k], xlab = xlab, bor = "white", main = main, prob = TRUE, ylab = ylab,
+           xlim = xlims[,p], breaks = seq(xlims[1,p]-0.2, xlims[2,p]+0.2, length=30))
+      lines(density(Betas[state, p,, k]), col = color[state], lwd = 1, lty = 2)
+      abline(v = beta[state,p], col = color[state], lwd = 2)
+    }
+  }
+  # dev.off()
+}
