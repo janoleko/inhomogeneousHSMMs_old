@@ -88,10 +88,10 @@ ggsave("./figures/maps.pdf", combined_plot, width = 10, height = 5, units = "in"
 # raw time series
 # plot(muskox$x, muskox$y, xlab = "UTM easting", ylab = "UTM northing", type = "l", bty = "n")
 
-pdf("./figures/muskox_step.pdf", width = 8, height = 4)
+# pdf("./figures/muskox_step.pdf", width = 8, height = 4)
 par(mar = c(4.5,4,2,2))
 plot(muskox$step[1:1000], type = "h", bty = "n", ylab = "step length (meters)", xlab = "time")
-dev.off()
+# dev.off()
 
 # plot(muskox$step, type = "h", bty = "n", ylab = "step length (meters)")
 plot(muskox$angle, type = "h", bty = "n", ylab = "turning angle (radians)")
@@ -214,7 +214,7 @@ theta.star = c(log(rep(4,3)), rep(0,3*2), log(rep(0.1,3)), log(c(4, 80, 400, 5, 
 # mod5_optim = optimParallel(par=theta.star, fn=mllk_sp, X=muskox, N=3, L=24, K=1, agsizes = rep(30,3),
 #                        control = list(trace = 4, maxit = 1e4, ndeps=rep(1e-5, length(theta.star))))
 # stopCluster(cl)
-# 
+
 # mod5 = nlm(mllk_sp, mod5_optim$par, X=muskox, N=3, L=24, K=1, agsizes = rep(30,3),
 #            iterlim = 1e3, print.level = 2)
 # saveRDS(mod5, "./application/models/mod5.rds")
